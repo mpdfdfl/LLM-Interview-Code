@@ -32,6 +32,8 @@
   - [GRPO Loss](#grpo-loss)
 - [参数高效微调](#参数高效微调)
   - [LoRA](#lora)
+- [CUDA 手撕题](#cuda-手撕题)
+  - [SM90 FP8 1D2D Persistent GEMM](#sm90-fp8-1d2d-persistent-gemm)
 - [参考文献](#参考文献)
 
 ## 项目简介
@@ -44,9 +46,10 @@
 - **前馈网络**：FFN、SwiGLU、MoE
 - **损失函数**：Pretrain、SFT、DPO、PPO、GRPO 等训练损失
 - **参数高效微调**：LoRA
+- **CUDA Kernel**：CUTE C++/DeepGEMM SM90 WGMMA GEMM，包含 FP8 1D2D persistent kernel
 
 **项目特色**：
-- 从零实现，无第三方依赖
+- Python 组件从零实现；CUDA 示例显式标注所需底层依赖
 - 详细注释，张量形状图解
 - 公式推导，原理解析
 
@@ -93,6 +96,10 @@ LLM-Interview-Code/
 │   └── EntropyLoss.py
 ├── peft/                          # 参数高效微调
 │   └── LoRALinear.py
+├── cuda/                          # CUDA Kernel 手撕题
+│   ├── sm90_fp8_persistent_1d2d.cu
+│   ├── CMakeLists.txt
+│   └── README.md
 ├── pytorch_tensor_reshape.ipynb   # PyTorch 张量操作教程
 └── README.md
 ```
@@ -705,6 +712,16 @@ flowchart TD
 
 ---
 
+## CUDA 手撕题
+
+### SM90 FP8 1D2D Persistent GEMM
+
+[`cuda/sm90_fp8_persistent_1d2d.cu`](cuda/sm90_fp8_persistent_1d2d.cu) 是一份面试手撕导向的 kernel 本体，参照 DeepGEMM 的 SM90 FP8 1D2D 实现编写。
+
+代码展示了 A/B/SFA/SFB 的数据约定、CUTE global/shared layout、persistent scheduler、TMA 多 stage pipeline、warp specialization、WGMMA 主循环和 FP32 scale promotion。为了突出主干，它固定 `64x128x128` tile 并省略边界、cluster multicast 和完整 TMA epilogue。数据/layout 图解见 [`cuda/README.md`](cuda/README.md)。
+
+---
+
 ## 参考文献
 
 ### 注意力机制
@@ -734,4 +751,3 @@ flowchart TD
 - [LoRA: Low-Rank Adaptation](https://arxiv.org/abs/2106.09685)
 
 ---
-
