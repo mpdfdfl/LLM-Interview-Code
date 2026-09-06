@@ -3,27 +3,18 @@ project(sm90_cute_gemm LANGUAGES CXX CUDA)
 
 find_package(CUDAToolkit REQUIRED)
 
-# 默认假设本仓库与 DeepGEMM 位于同一个父目录；也可用
-# cmake -DDEEP_GEMM_ROOT=/path/to/DeepGEMM 覆盖。
-set(DEEP_GEMM_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../DeepGEMM"
-    CACHE PATH "Path to a DeepGEMM source tree")
-
-set(DEEP_GEMM_INCLUDE "${DEEP_GEMM_ROOT}/deep_gemm/include")
-set(CUTLASS_INCLUDE "${DEEP_GEMM_ROOT}/third-party/cutlass/include")
-
-if(NOT EXISTS "${DEEP_GEMM_INCLUDE}/deep_gemm/mma/sm90.cuh")
-    message(FATAL_ERROR "DeepGEMM headers not found: ${DEEP_GEMM_ROOT}")
-endif()
+# 直接指定 CUTLASS 源码目录，无需 DeepGEMM。接口参照 CUTLASS v3.9.2。
+set(CUTLASS_ROOT "" CACHE PATH "Path to a CUTLASS source tree")
+set(CUTLASS_INCLUDE "${CUTLASS_ROOT}/include")
 if(NOT EXISTS "${CUTLASS_INCLUDE}/cute/tensor.hpp")
     message(FATAL_ERROR
-        "CUTLASS submodule not found. Run: "
-        "git -C ${DEEP_GEMM_ROOT} submodule update --init third-party/cutlass")
+        "CUTLASS headers not found. Configure with -DCUTLASS_ROOT=/path/to/cutlass")
 endif()
 
 add_library(sm90_fp8_persistent_1d2d OBJECT sm90_fp8_persistent_1d2d.cu)
 target_include_directories(sm90_fp8_persistent_1d2d PRIVATE
-    "${DEEP_GEMM_INCLUDE}"
     "${CUTLASS_INCLUDE}")
+target_link_libraries(sm90_fp8_persistent_1d2d PRIVATE CUDA::cudart CUDA::cuda_driver)
 target_compile_features(sm90_fp8_persistent_1d2d PRIVATE cxx_std_20 cuda_std_20)
 
 # WGMMA 依赖 Hopper architecture-specific target，必须使用 sm_90a 而不是 sm_90。
